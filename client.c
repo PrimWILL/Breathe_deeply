@@ -18,6 +18,8 @@
 #define HIGH 1
 #define PIN 20
 #define POUT 21
+#define IN 0
+#define OUT 1
 
 static const char *DEVICE = "/dev/spidev0.0";
 int fd = 0xff;                   // filepointer
@@ -129,7 +131,7 @@ static int GPIOWrite(int pin, int value)
    char path[VALUE_MAX_GPIO];
    int fd;
 
-   printf("write value!\n");
+   // printf("write value!\n");
 
    snprintf(path, VALUE_MAX_GPIO, "/sys/class/gpio/gpio%d/value", pin);
    fd = open(path, O_WRONLY);
@@ -144,7 +146,7 @@ static int GPIOWrite(int pin, int value)
       close(fd);
       return (0);
    }
-   printf("write value!!!!!!!!!!!\n");
+   // printf("write value!!!!!!!!!!!\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -174,96 +176,105 @@ int main(int argc, char *argv[]) {
    if (-1 == GPIODirection(POUT, OUT))
       return (2);
    
-   sock = socket(PF_INET, SOCK_STREAM, 0);
-   if (sock == -1)
-      error_handling("socket() error");
+   while(1) {
+        sock = socket(PF_INET, SOCK_STREAM, 0);
+        if (sock == -1)
+            error_handling("socket() error");
 
-   memset(&serv_addr, 0, sizeof(serv_addr));
-   serv_addr.sin_family = AF_INET;
-   serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
-   serv_addr.sin_port = htons(atoi(argv[2]));
+        memset(&serv_addr, 0, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
+        serv_addr.sin_port = htons(atoi(argv[2]));
 
-   if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
-      error_handling("connect() error");
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
+            error_handling("connect() error");
 
-   str_len = read(sock, msg, sizeof(msg));
-   if (str_len == -1)
-      error_handling("read() error");
+        str_len = read(sock, msg, sizeof(msg));
+        if (str_len == -1)
+            error_handling("read() error");
 
-   printf("Receive message from Server : %s\n", msg);
-   if (strncmp(on, msg, 1) == 0) {
-      printf("message is 1\n");
-      close(sock);
-      
-      int fd = open(DEVICE, O_RDWR);
-      // measure wind
-      for (int i = 0; i < 5; i++) {
-         wind += ((float)readadc(fd, 0)/256.0) * 5.0 * 6.0;
-      }
-      wind = wind / 5;
-	  printf("wind: %f!\n", wind);
-	  
-      // measure water
-	  water = readadc(fd, 1);
-	  if (water > 0) 
-	 	 snprintf(wind_rain_message, 16, "%02.2fm/s  rain  ", wind);
-	  else {
-		 snprintf(wind_rain_message, 16, "%02.2fm/s no rain", wind);
-		 printf("%02.2fm/s \n", wind);
-		 printf("%s\n", wind_rain_message);
-	  }
-	  printf("water: %d!\n", water);
-	  
-      // measure temperature & humidity
-      arduino(temp_humid_message);
-         
-      // measure fine dust
-      sds011_init(&fd);
-      fine_dust origin = {0, 0};
-      read_sds(5, &origin, fd);
-      snprintf(dust_message, 16, "pm10: %3.2f    ", origin.pm10);
-      snprintf(finedust_message, 16, "pm2.5: %3.2f   ", origin.pm25);
-      printf("PM2.5: %.2f, PM10: %.2f\n", origin.pm25, origin.pm10);
-      
-      // print LCD
-      if (lcd_open(&lcd_file) < 0) {
-         exit(1);
-      }
-      lcd_init();
+        printf("Receive message from Server : %s\n", msg);
+        if (strncmp(on, msg, 1) == 0) {
+            printf("message is 1\n");
+            close(sock);
+            
+            int fd = open(DEVICE, O_RDWR);
+            // measure wind
+            for (int i = 0; i < 5; i++) {
+                wind += ((float)readadc(fd, 0)/256.0) * 5.0 * 6.0;
+            }
+            wind = wind / 5;
+            printf("wind: %f!\n", wind);
+            
+            // measure water
+            water = readadc(fd, 1);
+            if (water > 0) 
+                snprintf(wind_rain_message, 16, "%02.1fm/s  rain  ", wind);
+            else {
+                snprintf(wind_rain_message, 16, "%02.1fm/s no rain", wind);
+            }
+			printf("%s\n", wind_rain_message);
+            
+            // measure temperature & humidity
+            arduino(temp_humid_message);
+                
+            // measure fine dust
+            sds011_init(&fd);
+            fine_dust origin = {0, 0};
+            read_sds(5, &origin, fd);
+            snprintf(dust_message, 16, "pm10: %3.2f    ", origin.pm10);
+            snprintf(finedust_message, 16, "pm2.5: %3.2f   ", origin.pm25);
+            printf("PM2.5: %.2f, PM10: %.2f\n", origin.pm25, origin.pm10);
+            
+            // measure wind chill temperature
+            // float wind_chill = 13.12 + 0.6215 * 
+            
+            // print LCD
+            if (lcd_open(&lcd_file) < 0) {
+                exit(1);
+            }
+            lcd_init();
 
-      int buttonStatus = 0;
-      int prevButtonStatus = 1;
-      int buttonCount = 0;
-      
-      while(1) {
-         if (prevButtonStatus == 0 && (buttonStatus != GPIORead(PIN))) {
-            buttonCount++;
-         }
-         
-         if (buttonCount == 1) {
-            lcd_string(wind_rain_message, LCD_LINE_1);
-            lcd_string(temp_humid_message, LCD_LINE_2);							
-         }
-         else if (buttonCount == 2) {
-            lcd_string(dust_message, LCD_LINE_1);
-            lcd_string(finedust_message, LCD_LINE_2);						
-         }			
-         else if (buttonCount == 3) {
-            lcd_byte(0x01, LCD_CMD);
-            prevButtonStatus = 1;
-            buttonStatus = 1;
-            break;
-         }	
-         
-         buttonStatus = GPIORead(PIN);
-         prevButtonStatus = buttonStatus;
-         usleep(50000);
-      }
+            int buttonStatus = 0;
+            int prevButtonStatus = 1;
+            int buttonCount = 0;
+
+            if (-1 == GPIOWrite(POUT, 1))
+                return (3);
+            
+            while(1) {
+                if (prevButtonStatus == 0 && (buttonStatus != GPIORead(PIN))) {
+                    buttonCount++;
+                    lcd_byte(0x01, LCD_CMD);
+                }
+                
+                if (buttonCount == 1) {
+                    lcd_string(wind_rain_message, LCD_LINE_1);
+                    lcd_string(temp_humid_message, LCD_LINE_2);					
+                    buttonCount++;
+                }
+                else if (buttonCount == 3) {
+                    lcd_string(dust_message, LCD_LINE_1);
+                    lcd_string(finedust_message, LCD_LINE_2);						
+                    buttonCount++;
+                }			
+                else if (buttonCount == 5) {
+                    lcd_byte(0x01, LCD_CMD);
+                    prevButtonStatus = 1;
+                    buttonStatus = 1;
+                    break;
+                }
+
+                buttonStatus = GPIORead(PIN);
+                prevButtonStatus = buttonStatus;
+                usleep(50000);
+            }
+        }
+        else {
+            printf("message is 0\n");
+        }
+        close(sock);
    }
-   else {
-      printf("message is 0\n");
-   }
-   close(sock);
 	   //Disable GPIO pins
    if (-1 == GPIOUnexport(POUT))
       return (4);

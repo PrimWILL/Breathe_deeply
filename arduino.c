@@ -58,6 +58,7 @@ static const char *deviceName = "/dev/i2c-1";
         }  
         strcpy(message, buf2);
     } 
+    printf("%s\n", message);
     usleep(10000);  
-    close(file);  
+    // close(file);  
 }  

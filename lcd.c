@@ -71,7 +71,7 @@ void lcd_string(char *message, int line)
 {
     lcd_byte(line, LCD_CMD);
     for(int i = 0; i < LCD_WIDTH && i < strlen(message); i++) {
-		printf("printing %c %d\n", message[i], i); 
+		// printf("printing %c %d\n", message[i], i); 
         lcd_byte(message[i],LCD_CHR);
     }
 }
