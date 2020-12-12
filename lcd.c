@@ -9,13 +9,15 @@
 #include "lcd.h"
 
 int file_i2c;
-static int LCD_BACKLIGHT = 0x08; // ON
+static int LCD_BACKLIGHT = 0x08; // BACKLIGHT ON
+// if you want to BACKLIGHT OFF, set 0x00
 static int ENABLE = 4;           // enable bit
 
 static int E_PULSE = 500;
 static int E_DELAY = 500;
 char *filename = (char*)"/dev/i2c-1";
 
+// for toggle enable
 void lcd_toggle_enable(int bits)
 {
     unsigned char buffer[1];
@@ -33,6 +35,12 @@ void lcd_toggle_enable(int bits)
     usleep(E_DELAY);
 }
 
+/* 
+ * send byte to data pins
+ * bits = the data
+ * mode = 1 for data
+ *      = 0 for command
+ */
 void lcd_byte(int bits, int mode)
 {
     unsigned char buffer[1];
@@ -42,10 +50,12 @@ void lcd_byte(int bits, int mode)
     int length = 1;
     buffer[0] = bits_high;
 
+    // High bits
     if (write(file_i2c, buffer, length) != length) 
         printf("Error: lcd_byte(bits_high).\n");
     lcd_toggle_enable(bits_high);
 
+    // Low bits
     buffer[0] = bits_low;
     if (write(file_i2c, buffer, length) != length) 
         printf("Error: lcd_byte(bits_low).\n");

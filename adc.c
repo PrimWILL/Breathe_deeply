@@ -12,7 +12,6 @@
 
 #include "adc.h"
 
-static const char *DEVICE = "/dev/spidev0.0"; // SPI 통신 위치
 static uint8_t MODE = SPI_MODE_0; // 디바이스의 통신 타이밍 지정 (클록 극성 = 0, 클록 단계 = 0)
 static uint8_t BITS = 8;
 static uint32_t CLOCK = 1000000;
