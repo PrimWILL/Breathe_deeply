@@ -10,7 +10,7 @@ typedef struct {
 
 void sds011_init(int *fd);
 
-int ProcessResponse(const uint8_t *packet, fine_dust *ret);
+int read_finedust(const uint8_t *packet, fine_dust *ret);
 
 int read_sds(int loop, fine_dust *origin, int fd);
 

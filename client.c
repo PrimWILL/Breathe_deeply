@@ -27,126 +27,129 @@ fine_dust origin;
 int lcd_file;
 
 void error_handling( char *message){
- fputs(message,stderr);
- fputc( '\n',stderr);
- exit( 1);
+    fputs(message, stderr);
+    fputc('\n', stderr);
+    exit(1);
 }
 
+
+// to open gpio export (for using button)
 static int GPIOExport(int pin)
 {
 #define BUFFER_MAX 3
-   char buffer[BUFFER_MAX];
-   ssize_t bytes_written;
-   int fd;
+    char buffer[BUFFER_MAX];
+    ssize_t bytes_written;
+    int fd;
 
-   fd = open("/sys/class/gpio/export", O_WRONLY);
-   if (-1 == fd)
-   {
-      fprintf(stderr, "Failed to open export for writing!\n");
-      return (-1);
-   }
+    fd = open("/sys/class/gpio/export", O_WRONLY);
+    if (-1 == fd)
+    {
+        fprintf(stderr, "Failed to open export for writing!\n");
+        return (-1);
+    }
 
-   bytes_written = snprintf(buffer, BUFFER_MAX, "%d", pin);
-   write(fd, buffer, bytes_written);
-   close(fd);
-   return (0);
+    bytes_written = snprintf(buffer, BUFFER_MAX, "%d", pin);
+    write(fd, buffer, bytes_written);
+    close(fd);
+    return (0);
 }
 
+// to open gpio direction (for using button)
 static int GPIODirection(int pin, int dir)
 {
-   static const char s_directions_str[] = "in\0out";
+    static const char s_directions_str[] = "in\0out";
 
 #define DIRECTION_MAX 35
-   char path[DIRECTION_MAX] = "/sys/class/gpio/gpio%d/direction";
-   int fd;
+    char path[DIRECTION_MAX] = "/sys/class/gpio/gpio%d/direction";
+    int fd;
 
-   snprintf(path, DIRECTION_MAX, "/sys/class/gpio/gpio%d/direction", pin);
+    snprintf(path, DIRECTION_MAX, "/sys/class/gpio/gpio%d/direction", pin);
 
-   fd = open(path, O_WRONLY);
-   if (-1 == fd)
-   {
-      fprintf(stderr, "Failed to open gpio direction for writing!\n");
-      return (-1);
-   }
+    fd = open(path, O_WRONLY);
+    if (-1 == fd)
+    {
+        fprintf(stderr, "Failed to open gpio direction for writing!\n");
+        return (-1);
+    }
 
-   if (-1 == write(fd, &s_directions_str[IN == dir ? 0 : 3], IN == dir ? 2 : 3))
-   {
-      fprintf(stderr, "Failed to set direction!\n");
-      return (-1);
-   }
+    if (-1 == write(fd, &s_directions_str[IN == dir ? 0 : 3], IN == dir ? 2 : 3))
+    {
+        fprintf(stderr, "Failed to set direction!\n");
+        return (-1);
+    }
 
-   close(fd);
-   return (0);
+    close(fd);
+    return (0);
 }
 
+// to open gpio unexport (for using button)
 static int GPIOUnexport(int pin)
 {
-   char buffer[BUFFER_MAX];
-   ssize_t bytes_written;
-   int fd;
+    char buffer[BUFFER_MAX];
+    ssize_t bytes_written;
+    int fd;
 
-   fd = open("/sys/class/gpio/unexport", O_WRONLY);
-   if (-1 == fd)
-   {
-      fprintf(stderr, "Failed to open unexport for writing!\n");
-      return (-1);
-   }
+    fd = open("/sys/class/gpio/unexport", O_WRONLY);
+    if (-1 == fd)
+    {
+        fprintf(stderr, "Failed to open unexport for writing!\n");
+        return (-1);
+    }
 
-   bytes_written = snprintf(buffer, BUFFER_MAX, "%d", pin);
-   write(fd, buffer, bytes_written);
-   close(fd);
-   return (0);
+    bytes_written = snprintf(buffer, BUFFER_MAX, "%d", pin);
+    write(fd, buffer, bytes_written);
+    close(fd);
+    return (0);
 }
 
+// to open gpio value for reading (for using button)
 static int GPIORead(int pin)
 {
 #define VALUE_MAX_GPIO 30
-   char path[VALUE_MAX_GPIO];
-   char value_str[3];
-   int fd;
+    char path[VALUE_MAX_GPIO];
+    char value_str[3];
+    int fd;
 
-   snprintf(path, VALUE_MAX_GPIO, "/sys/class/gpio/gpio%d/value", pin);
-   fd = open(path, O_RDONLY);
+    snprintf(path, VALUE_MAX_GPIO, "/sys/class/gpio/gpio%d/value", pin);
+    fd = open(path, O_RDONLY);
 
-   if (-1 == fd)
-   {
-      fprintf(stderr, "Failed to open gpio value for reading!\n");
-      return (-1);
-   }
+    if (-1 == fd)
+    {
+        fprintf(stderr, "Failed to open gpio value for reading!\n");
+        return (-1);
+    }
 
-   if (-1 == read(fd, value_str, 3))
-   {
-      fprintf(stderr, "Failed to read value!\n");
-      return (-1);
-   }
+    if (-1 == read(fd, value_str, 3))
+    {
+        fprintf(stderr, "Failed to read value!\n");
+        return (-1);
+    }
 
-   close(fd);
-   return (atoi(value_str));
+    close(fd);
+    return (atoi(value_str));
 }
 
+// to open gpio value for writing (for using button)
 static int GPIOWrite(int pin, int value)
 {
-   static const char s_values_str[] = "01";
+    static const char s_values_str[] = "01";
 
-   char path[VALUE_MAX_GPIO];
-   int fd;
+    char path[VALUE_MAX_GPIO];
+    int fd;
 
-   // printf("write value!\n");
+    snprintf(path, VALUE_MAX_GPIO, "/sys/class/gpio/gpio%d/value", pin);
+    fd = open(path, O_WRONLY);
+    if (-1 == fd)
+    {
+        fprintf(stderr, "Failed to open gpio value for writing!\n");
+    }
 
-   snprintf(path, VALUE_MAX_GPIO, "/sys/class/gpio/gpio%d/value", pin);
-   fd = open(path, O_WRONLY);
-   if (-1 == fd)
-   {
-      fprintf(stderr, "Failed to open gpio value for writing!\n");
-   }
-
-   if (1 != write(fd, &s_values_str[LOW == value ? 0 : 1], 1))
-   {
-      fprintf(stderr, "Failed to write value!\n");
-      close(fd);
-      return (0);
-   }
-   // printf("write value!!!!!!!!!!!\n");
+    if (1 != write(fd, &s_values_str[LOW == value ? 0 : 1], 1))
+    {
+        fprintf(stderr, "Failed to write value!\n");
+        close(fd);
+        return (0);
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -169,14 +172,18 @@ int main(int argc, char *argv[]) {
         printf("Usage : %s <IP> <port>\n", argv[0]);
         exit(1);
     }
-   //Enable GPIO pins
-   if (-1 == GPIOExport(POUT))
-      return (1);
-   //Set GPIO directions
-   if (-1 == GPIODirection(POUT, OUT))
-      return (2);
-   
-   while(1) {
+
+    //Enable GPIO pins
+    if (-1 == GPIOExport(POUT))
+        return (1);
+
+    //Set GPIO directions
+    if (-1 == GPIODirection(POUT, OUT))
+        return (2);
+
+    // start socket communication with server
+    while (1)
+    {
         sock = socket(PF_INET, SOCK_STREAM, 0);
         if (sock == -1)
             error_handling("socket() error");
@@ -193,32 +200,31 @@ int main(int argc, char *argv[]) {
         if (str_len == -1)
             error_handling("read() error");
 
-        printf("Receive message from Server : %s\n", msg);
-        if (strncmp(on, msg, 1) == 0) {
-            printf("message is 1\n");
-            close(sock);
-            
+        printf("Receive message from Server : %s\n", msg); // for checking in SHELL]
+
+        // when client receive message "1" from server
+        if (strncmp(on, msg, 1) == 0) { 
             int fd = open(DEVICE, O_RDWR);
-            // measure wind
+
+            /* MEASURE WIND */
             for (int i = 0; i < 5; i++) {
                 wind += ((float)readadc(fd, 0)/256.0) * 5.0 * 6.0;
             }
-            wind = wind / 5;
-            printf("wind: %f!\n", wind);
+            wind = wind / 5; // 5번 측정한 풍속값의 평균
             
-            // measure water
+            /* MEASURE WATER */
             water = readadc(fd, 1);
             if (water > 0) 
                 snprintf(wind_rain_message, 16, "%02.1fm/s  rain  ", wind);
             else {
                 snprintf(wind_rain_message, 16, "%02.1fm/s no rain", wind);
             }
-			printf("%s\n", wind_rain_message);
+			printf("%s\n", wind_rain_message); // for checking in SHELL
             
-            // measure temperature & humidity
+            /* MEASURE TEMPERATURE & HUMIDITY */
             arduino(temp_humid_message);
                 
-            // measure fine dust
+            /* MEASURE FINE DUST */
             sds011_init(&fd);
             fine_dust origin = {0, 0};
             read_sds(5, &origin, fd);
@@ -226,10 +232,7 @@ int main(int argc, char *argv[]) {
             snprintf(finedust_message, 16, "pm2.5: %3.2f   ", origin.pm25);
             printf("PM2.5: %.2f, PM10: %.2f\n", origin.pm25, origin.pm10);
             
-            // measure wind chill temperature
-            // float wind_chill = 13.12 + 0.6215 * 
-            
-            // print LCD
+            /* PRINT LCD */
             if (lcd_open(&lcd_file) < 0) {
                 exit(1);
             }
@@ -245,19 +248,24 @@ int main(int argc, char *argv[]) {
             while(1) {
                 if (prevButtonStatus == 0 && (buttonStatus != GPIORead(PIN))) {
                     buttonCount++;
-                    lcd_byte(0x01, LCD_CMD);
+                    lcd_byte(0x01, LCD_CMD);    // clear LCD
                 }
                 
-                if (buttonCount == 1) {
+                // when user press button once: display rain, wind, temperature, and humidity
+                if (buttonCount == 1) { 
                     lcd_string(wind_rain_message, LCD_LINE_1);
                     lcd_string(temp_humid_message, LCD_LINE_2);					
                     buttonCount++;
                 }
+
+                // when user press button twice: display pm10 & pm2.5
                 else if (buttonCount == 3) {
                     lcd_string(dust_message, LCD_LINE_1);
                     lcd_string(finedust_message, LCD_LINE_2);						
                     buttonCount++;
                 }			
+
+                // when user press button triple: clear LCD
                 else if (buttonCount == 5) {
                     lcd_byte(0x01, LCD_CMD);
                     prevButtonStatus = 1;
@@ -271,12 +279,13 @@ int main(int argc, char *argv[]) {
             }
         }
         else {
-            printf("message is 0\n");
+            printf("message is 0\n"); // for checking in SHELL
         }
         close(sock);
-   }
-	   //Disable GPIO pins
-   if (-1 == GPIOUnexport(POUT))
-      return (4);
-    return (0);
+    }
+
+    //Disable GPIO pins
+    if (-1 == GPIOUnexport(POUT))
+       return (4);
+    return 0;
 }

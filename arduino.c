@@ -10,21 +10,22 @@
 #include <string.h>
    
 //I2C bus  
-static const char *deviceName = "/dev/i2c-1";  
-#define ADDRESS 0x04
+static const char *fileName = "/dev/i2c-1";  
+#define ADDRESS 0x04    // I2C DEVICE(Arduino) ADDRESS
    
  void arduino(char *message)
 {  
     int file;  
+    int sending_value = 1;
    
-    if ((file = open( deviceName, O_RDWR ) ) < 0)   
+    // file open
+    if ((file = open(fileName, O_RDWR)) < 0)   
     {  
-        fprintf(stderr, "I2C: Failed to access %s\n", deviceName);  
+        fprintf(stderr, "I2C: Failed to access %s\n", fileName);  
         exit(1);  
     }  
-    printf("I2C: Connected\n");  
-  
-    printf("I2C: acquiring buss to 0x%x\n", ADDRESS);  
+
+    // set address of I2C DEVICE
     if (ioctl(file, I2C_SLAVE, ADDRESS) < 0)   
     {  
         fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);  
@@ -33,17 +34,16 @@ static const char *deviceName = "/dev/i2c-1";
 
     unsigned char cmd[16];  
 
+    printf("Sending %d\n", sending_value); // for checking in SHELL
+    cmd[0] = sending_value;  
 
-    printf("Sending %d\n", 1);  
-
-    cmd[0] = 1;  
-    if (write(file, cmd, 1) == 1)   
+    if (write(file, cmd, 1) == 1)   // send data to slave   
     {  
-            
         usleep(10000);  
 
-        char buf[16], buf2[16];  
-        read( file, buf, 16 );        
+        char buf[16];            // buffer which read data
+        char buf2[16];           // buffer which will be copied
+        read(file, buf, 16);     // read data of Arduino
 
         int i;  
         for(i=0; i<16; i++ )  
@@ -56,9 +56,9 @@ static const char *deviceName = "/dev/i2c-1";
                 break;  
             }  
         }  
-        strcpy(message, buf2);
+        strcpy(message, buf2);  // string copy: from buf2 to message 
     } 
-    printf("%s\n", message);
+    printf("%s\n", message);    // shell에서 message를 확인하기 위한 용도
     usleep(10000);  
     // close(file);  
 }  

@@ -14,9 +14,8 @@
 #include <sys/ioctl.h>
 #include <linux/usbdevice_fs.h>
 
-char port[20] = "/dev/ttyUSB0";
+char port[20] = "/dev/ttyUSB0";     // sds011이 연결된 위치
 
-// int fd = 0xff;                   // filepointer
 void sds011_init(int *fd)
 {
    system("modprobe usbserial");
@@ -26,18 +25,16 @@ void sds011_init(int *fd)
 
    if (*fd < 0) {
       fprintf(stderr, "could not open %s\n", port);
-      restore_ser(*fd);
       exit(EXIT_FAILURE);
    }
 
-   configure_interface(*fd, B9600);
-   set_blocking(*fd, 0);
+   set_UART(*fd); // set UART communication
 
-   usleep(100); 
-   tcflush(*fd,TCIOFLUSH);
+   usleep(100); // need some time for preparing flush
+   tcflush(*fd,TCIOFLUSH); // 송수신 데이터를 버린다 (TCIOFLUSH: 입력을 비우고, 출력이 완료되지 않는 것도 비움)
 }
 
-int ProcessResponse(const uint8_t *packet, fine_dust *ret)
+int read_finedust(const uint8_t *packet, fine_dust *ret)
 {
     if (packet[1] == 0xC0) {
         ret->pm25 = (float)(((packet[3] * 256) + packet[2]) / 10.0);
@@ -49,18 +46,19 @@ int ProcessResponse(const uint8_t *packet, fine_dust *ret)
 
 int read_sds(int loop, fine_dust *origin, int fd) {
     uint8_t buf[20];
-    int num = 0;
     int count = loop;
-    fine_dust data = {0,0};
-    while (count) {
+    fine_dust data = {0,0}; // pm2.5, pm10의 값을 저장하기 위한 구조체 선언
+    
+    while (count) { // 5번 값을 측정
         read(fd, buf, sizeof(buf));
 
-        if (ProcessResponse(buf, &data) == 1) {
+        if (read_finedust(buf, &data) == 1) {
             origin->pm25 += data.pm25;
             origin->pm10 += data.pm10;
             count--;
         }
     }
+    // 5번 측정한 값의 평균을 저장
     origin->pm25 /= (float)10;
     origin->pm10 /= (float)10;
 
